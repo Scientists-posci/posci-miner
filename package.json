@@ -1,0 +1,56 @@
+{
+  "name": "posci-miner",
+  "version": "0.1.0",
+  "description": "CLI miner for POSCI (Proof of Scientist) — Bitcoin-style PoW token on Ethereum mainnet. CPU + WebGPU (via headless Chrome) + hybrid modes. Anti-MEV: hash includes msg.sender.",
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://scientistdapp.online",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aiyalxn/posci-miner.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aiyalxn/posci-miner/issues"
+  },
+  "keywords": [
+    "posci",
+    "ethereum",
+    "mining",
+    "pow",
+    "proof-of-work",
+    "erc20",
+    "webgpu",
+    "0xbitcoin",
+    "fair-launch",
+    "cli",
+    "miner"
+  ],
+  "author": "scientistsdapp",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "bin": {
+    "posci-miner": "bin/posci-miner.mjs",
+    "posci": "bin/posci-miner.mjs"
+  },
+  "scripts": {
+    "start": "node bin/posci-miner.mjs",
+    "dev": "node bin/posci-miner.mjs --help",
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "js-sha3": "^0.9.3",
+    "kleur": "^4.1.5",
+    "viem": "^2.21.55",
+    "ws": "^8.18.0"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "docs/logo.png",
+    "docs/logo.svg",
+    "README.md",
+    "LICENSE"
+  ]
+}
