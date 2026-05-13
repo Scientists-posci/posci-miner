@@ -6,7 +6,8 @@
 //   new Worker(new URL('./cpu-worker.mjs', import.meta.url), { workerData: {...} })
 
 import { parentPort, workerData } from 'node:worker_threads';
-import { keccak_256 } from 'js-sha3';
+import sha3 from 'js-sha3';            // js-sha3 is CommonJS — must use default import
+const { keccak_256 } = sha3;
 
 const {
   challengeHex,        // 0x-prefixed 32 bytes
