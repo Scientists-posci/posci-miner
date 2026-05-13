@@ -29,7 +29,7 @@ Examples:
   $ posci-miner mine --wallet alice --password mypw --gpu 256
 
 Live data:  https://scientistdapp.online
-Source:     https://github.com/aiyalxn/posci-miner
+Source:     https://github.com/Scientists-posci/posci-miner
 `);
 
 registerWalletCommands(program);

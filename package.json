@@ -7,10 +7,10 @@
   "homepage": "https://scientistdapp.online",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aiyalxn/posci-miner.git"
+    "url": "https://github.com/Scientists-posci/posci-miner.git"
   },
   "bugs": {
-    "url": "https://github.com/aiyalxn/posci-miner/issues"
+    "url": "https://github.com/Scientists-posci/posci-miner/issues"
   },
   "keywords": [
     "posci",

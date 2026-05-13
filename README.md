@@ -246,7 +246,7 @@ posci-miner/
 
 PRs welcome. Open an issue for design discussion before significant changes.
 
-Please don't submit token-shilling spam — this repo is for the miner only. For protocol questions, [open an issue](https://github.com/aiyalxn/posci-miner/issues) or come to [@scientistsdapp](https://x.com/scientistsdapp) on X.
+Please don't submit token-shilling spam — this repo is for the miner only. For protocol questions, [open an issue](https://github.com/Scientists-posci/posci-miner/issues) or come to [@scientistsdapp](https://x.com/scientistsdapp) on X.
 
 ---
 
