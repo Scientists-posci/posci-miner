@@ -17,6 +17,7 @@ export class Dashboard {
       myMined: 0n, myBalance: 0n,
       hits: [],
       lastTx: null, lastTxStatus: null,
+      pendingNote: '',     // shown when we have a buffered solution waiting for gates
     };
     this.tty = process.stdout.isTTY;
     this._timer = null;
@@ -62,14 +63,23 @@ export class Dashboard {
     const total = s.cpuRate + s.gpuRate;
     const elapsed = formatDuration((Date.now() - this.startedAt) / 1000);
 
+    const canMine = s.timeGate && s.poolGate;
+    const phase = canMine ? c.green().bold(' · LIVE') : c.yellow().bold(' · PRE-WARM');
+
     lines.push('');
-    lines.push(c.bold().cyan('  POSCI miner') + c.dim(` · ${this.mode.toUpperCase()} · ${elapsed}`));
+    lines.push(c.bold().cyan('  POSCI miner') + c.dim(` · ${this.mode.toUpperCase()} · ${elapsed}`) + phase);
     lines.push(c.dim('  ─────────────────────────────────────────────────────────────'));
     lines.push(`  ${c.dim('Miner   ')}  ${c.bold(this.minerAddress)}`);
     lines.push(`  ${c.dim('Status  ')}  ` +
       (s.timeGate ? c.green('time ✓') : c.yellow(`time ⏳ opens ${new Date(s.miningStartTime*1000).toLocaleString()}`)) +
       ' · ' +
       (s.poolGate ? c.green('pool ✓') : c.yellow('pool ⏳ waiting on genesis cap')));
+    if (!canMine) {
+      lines.push(`  ${c.dim('         ')}  ${c.dim('hashing locally to pre-warm — NOT submitting tx until gates open')}`);
+    }
+    if (s.pendingNote) {
+      lines.push(`  ${c.cyan(s.pendingNote)}`);
+    }
     lines.push('');
 
     // Hashrate panel

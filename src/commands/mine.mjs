@@ -93,26 +93,73 @@ export function registerMineCommand(program) {
       });
       mgr.on('error', ({ source, error }) => log.warn(`[${source}] ${error.message ?? error}`));
       mgr.on('stats', ({ cpu, gpu }) => dash.update({ cpuRate: cpu.hashrate, gpuRate: gpu.hashrate }));
-      mgr.on('hit', async ({ source, nonce, digest }) => {
-        // Auto-submit. The contract verifies digest with msg.sender — if our
-        // wallet matches what the worker hashed against, it'll succeed.
-        dash.pushHit({ source, nonce: '0x'+nonce.toString(16), digest, reward: chain.miningReward, status: 'pending' });
+
+      // ── Hit handling — gated on chain.canMine ─────────────────────────
+      // Workers don't know about gates; they just hash. The check that
+      // matters is "is the contract actually willing to accept mine() right
+      // now?" — driven by chain.canMine (time gate AND pool gate both open).
+      //
+      // If gates are closed, we BUFFER the most recent valid solution
+      // (against the current challenge) and re-attempt as soon as gates
+      // open. This gets you the FIRST submission window without burning gas
+      // on guaranteed-revert txs.
+      let pendingHit = null;
+      let busy = false;       // ensure only one in-flight tx at a time
+
+      async function trySubmit(hit) {
+        if (busy) return;
+        if (!chain.canMine) {
+          pendingHit = hit;
+          return;
+        }
+        busy = true;
+        const nonceHex = '0x' + hit.nonce.toString(16);
+        dash.pushHit({ source: hit.source, nonce: nonceHex, digest: hit.digest,
+                       reward: chain.miningReward, status: 'pending' });
         try {
-          const txHash = await submitMine(wallet, pub, nonce, digest);
-          dash.pushHit({ source, nonce: '0x'+nonce.toString(16), digest, reward: chain.miningReward, txHash, status: 'pending' });
+          const txHash = await submitMine(wallet, pub, hit.nonce, hit.digest);
+          dash.pushHit({ source: hit.source, nonce: nonceHex, digest: hit.digest,
+                         reward: chain.miningReward, txHash, status: 'pending' });
           const receipt = await pub.waitForTransactionReceipt({ hash: txHash, timeout: 180_000 });
           if (receipt.status === 'success') {
             myMinedRun += chain.miningReward;
             const bal = await readPosciBalance(pub, acct.address);
-            dash.pushHit({ source, nonce: '0x'+nonce.toString(16), digest, reward: chain.miningReward, txHash, status: 'success' });
+            dash.pushHit({ source: hit.source, nonce: nonceHex, digest: hit.digest,
+                           reward: chain.miningReward, txHash, status: 'success' });
             dash.update({ myMined: myMinedRun, myBalance: bal });
           } else {
-            dash.pushHit({ source, nonce: '0x'+nonce.toString(16), digest, reward: 0n, txHash, status: 'failed' });
+            dash.pushHit({ source: hit.source, nonce: nonceHex, digest: hit.digest,
+                           reward: 0n, txHash, status: 'failed' });
           }
         } catch (e) {
-          dash.pushHit({ source, nonce: '0x'+nonce.toString(16), digest, reward: 0n, status: 'failed' });
+          dash.pushHit({ source: hit.source, nonce: nonceHex, digest: hit.digest,
+                         reward: 0n, status: 'failed' });
+          log.warn(`submit error: ${e.shortMessage ?? e.message ?? e}`);
+        } finally {
+          busy = false;
+          pendingHit = null;
+        }
+      }
+
+      mgr.on('hit', (hit) => {
+        if (chain.canMine) {
+          // Gates open — submit immediately
+          trySubmit(hit).catch(() => {});
+        } else {
+          // Gates closed — keep the most recent solution for current challenge.
+          // Don't try to submit yet (would burn gas on guaranteed revert).
+          pendingHit = hit;
         }
       });
+
+      // Surface "we have a buffered solution waiting for gates" in the dashboard
+      const pendingTimer = setInterval(() => {
+        dash.update({
+          pendingNote: (!chain.canMine && pendingHit)
+            ? `★ buffered solution ready — will submit the moment gates open`
+            : '',
+        });
+      }, 1000);
 
       await mgr.start({
         challenge:  chain.challengeNumber,
@@ -120,18 +167,23 @@ export function registerMineCommand(program) {
         startNonce,
       });
 
-      // ── Periodic chain refresh: detect new challenge / target ─────────
+      // ── Periodic chain refresh: detect new challenge / target / gates ──
       const refreshSec = Math.max(3, Number(opts.refresh));
       const refreshTimer = setInterval(async () => {
         try {
           const fresh = await readMiningState(pub);
-          // If challenge changed, we need to swap jobs to the new one
-          if (fresh.challengeNumber !== chain.challengeNumber || fresh.miningTarget !== chain.miningTarget) {
+          const gatesJustOpened = fresh.canMine && !chain.canMine;
+          const challengeRotated = fresh.challengeNumber !== chain.challengeNumber
+                                || fresh.miningTarget    !== chain.miningTarget;
+
+          if (challengeRotated) {
             mgr.setJob({
               challenge: fresh.challengeNumber,
               target:    fresh.miningTarget,
               startNonce: BigInt('0x' + randomBytes(8).toString('hex')),
             });
+            // Old buffered solution is now invalid (different challenge)
+            pendingHit = null;
           }
           chain = fresh;
           dash.update({
@@ -144,12 +196,19 @@ export function registerMineCommand(program) {
             miningStartTime: chain.miningStartTime,
             networkHashrate: chain.networkHashrate,
           });
+
+          // Race-window: gates just flipped open AND we have a buffered solution
+          if (gatesJustOpened && pendingHit) {
+            log.ok(`Gates opened — submitting buffered solution from pre-warm period`);
+            trySubmit(pendingHit).catch(() => {});
+          }
         } catch { /* ignore transient RPC errors */ }
       }, refreshSec * 1000);
 
       // ── Graceful exit ──────────────────────────────────────────────────
       const cleanup = () => {
         clearInterval(refreshTimer);
+        clearInterval(pendingTimer);
         mgr.stop();
         dash.stop();
         log.banner(c.bold('  Stopped.'));
