@@ -1,9 +1,9 @@
 // On-chain constants for the live POSCI deployment.
 // These addresses match the verified contracts at scientistdapp.online.
 
-export const POSCI_TOKEN   = '0xD020e5E5c2724B2661C2FEF9AE878f49410a8B77';
-export const POSCI_MINING  = '0x9EAdD7dF7701e03d07c3727EC1ba816C2C9De936';
-export const POSCI_GENESIS = '0x7bC1520Da49Cd56D5BE11aA77650cA998951459d';
+export const POSCI_TOKEN   = '0xFbcF59DE93B4c62e0EEe21280c9EAA75AFb1E26c';
+export const POSCI_MINING  = '0x37f9663Ef548b8192a73F54930D8Cd40ea1D1eAa';
+export const POSCI_GENESIS = '0x77Ba7F769341948cdE3C085d39B2C4ec572649Dd';
 
 // Public RPC fallbacks. Override with --rpc on the CLI or POSCI_RPC env var.
 export const PUBLIC_RPCS = [

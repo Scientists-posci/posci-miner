@@ -10,7 +10,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518.17-339933)](https://nodejs.org)
-[![Chain](https://img.shields.io/badge/chain-Ethereum%20mainnet-627EEA)](https://etherscan.io/token/0xD020e5E5c2724B2661C2FEF9AE878f49410a8B77)
+[![Chain](https://img.shields.io/badge/chain-Ethereum%20mainnet-627EEA)](https://etherscan.io/token/0xFbcF59DE93B4c62e0EEe21280c9EAA75AFb1E26c)
 
 </div>
 
@@ -24,9 +24,9 @@ The PoW digest is `keccak256(challenge ‖ msg.sender ‖ nonce)` — your walle
 
 | | |
 |---|---|
-| Token contract  | [`0xD020e5E5c2724B2661C2FEF9AE878f49410a8B77`](https://etherscan.io/token/0xD020e5E5c2724B2661C2FEF9AE878f49410a8B77) |
-| Mining contract | [`0x9EAdD7dF7701e03d07c3727EC1ba816C2C9De936`](https://etherscan.io/address/0x9EAdD7dF7701e03d07c3727EC1ba816C2C9De936) |
-| Genesis contract| [`0x7bC1520Da49Cd56D5BE11aA77650cA998951459d`](https://etherscan.io/address/0x7bC1520Da49Cd56D5BE11aA77650cA998951459d) |
+| Token contract  | [`0xFbcF59DE93B4c62e0EEe21280c9EAA75AFb1E26c`](https://etherscan.io/token/0xFbcF59DE93B4c62e0EEe21280c9EAA75AFb1E26c) |
+| Mining contract | [`0x37f9663Ef548b8192a73F54930D8Cd40ea1D1eAa`](https://etherscan.io/address/0x37f9663Ef548b8192a73F54930D8Cd40ea1D1eAa) |
+| Genesis contract| [`0x77Ba7F769341948cdE3C085d39B2C4ec572649Dd`](https://etherscan.io/address/0x77Ba7F769341948cdE3C085d39B2C4ec572649Dd) |
 | Site / web miner| https://scientistdapp.online |
 
 ---
