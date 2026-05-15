@@ -108,6 +108,7 @@ export class MiningManager extends EventEmitter {
         onHit:    (h) => this._onWorkerMsg('gpu', { type: 'hit',   ...h }),
         onStats:  (s) => this._onWorkerMsg('gpu', { type: 'stats', hashes: s.delta }),
         onError:  (e) => this.emit('error', { source: 'gpu', error: e }),
+        onAdapter:(a) => this.emit('adapter', a),
       });
     } catch (e) {
       this.emit('error', { source: 'gpu-init', error: e });

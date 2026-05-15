@@ -93,6 +93,21 @@ export function registerMineCommand(program) {
       });
       mgr.on('error', ({ source, error }) => log.warn(`[${source}] ${error.message ?? error}`));
       mgr.on('stats', ({ cpu, gpu }) => dash.update({ cpuRate: cpu.hashrate, gpuRate: gpu.hashrate }));
+      mgr.on('adapter', (a) => {
+        const label = [a.vendor, a.architecture, a.device].filter(Boolean).join(' / ') || '(unknown)';
+        if (a.software) {
+          log.warn(`GPU adapter is SOFTWARE: ${label}`);
+          log.warn(`  → real GPU not reachable from headless Chrome. Expect CPU-class hashrate.`);
+          if (process.platform === 'darwin') {
+            log.warn(`  → on macOS this usually means Chrome can't get a Metal adapter in headless mode.`);
+            log.warn(`     Try the latest Chrome stable, or run without --no-sandbox if you set POSCI_CHROME_PATH.`);
+          } else if (process.platform === 'linux') {
+            log.warn(`  → on Linux install Mesa Vulkan drivers (mesa-vulkan-drivers) for a real adapter.`);
+          }
+        } else {
+          log.info(`  gpu  : ${label}`);
+        }
+      });
 
       // ── Hit handling — gated on chain.canMine ─────────────────────────
       // Workers don't know about gates; they just hash. The check that

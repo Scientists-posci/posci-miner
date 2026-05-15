@@ -9,8 +9,10 @@
 //
 // Tradeoffs:
 //   - Chrome adds ~200-400 MB RSS
-//   - Headless WebGPU on some Linux distros falls back to software renderer
-//     (slow). The driver checks adapter info and warns if SwiftShader.
+//   - Headless WebGPU on some Linux distros has no real driver, so the
+//     opt-in env var POSCI_GPU_SWIFTSHADER=1 enables the CPU SwiftShader
+//     fallback. NEVER enable that on Mac/Windows — it would override the
+//     real Metal/D3D12 backend with CPU software rendering.
 
 import { spawn } from 'node:child_process';
 import { writeFileSync, existsSync, readFileSync } from 'node:fs';
@@ -101,10 +103,12 @@ function packBE(bytes) {
 
 async function init() {
   if (!('gpu' in navigator)) { log('WebGPU NOT available in this Chrome'); ws.send(JSON.stringify({type:'error',msg:'webgpu unavailable'})); return false; }
-  const adapter = await navigator.gpu.requestAdapter();
+  const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) { log('No WebGPU adapter'); ws.send(JSON.stringify({type:'error',msg:'no adapter'})); return false; }
-  const info = await adapter.requestAdapterInfo?.() ?? {};
-  ws.send(JSON.stringify({type:'adapter', vendor:info.vendor||'', device:info.device||'', architecture:info.architecture||''}));
+  const info = adapter.info ?? (await adapter.requestAdapterInfo?.()) ?? {};
+  const blob = ((info.vendor||'') + ' ' + (info.architecture||'') + ' ' + (info.device||'') + ' ' + (info.description||'')).toLowerCase();
+  const software = /swiftshader|llvmpipe|software|microsoft basic|warp/.test(blob);
+  ws.send(JSON.stringify({type:'adapter', vendor:info.vendor||'', device:info.device||'', architecture:info.architecture||'', description:info.description||'', software}));
   device = await adapter.requestDevice();
   const module = device.createShaderModule({ code: KECCAK256_WGSL });
   pipeline = device.createComputePipeline({ layout: 'auto', compute: { module, entryPoint: 'main' } });
@@ -188,7 +192,7 @@ async function mineLoop(myRunId) {
 export async function startGpuDriver({
   challengeHex, minerAddrHex, targetHex, startNonceHex,
   powerWorkgroups = 64,
-  chromePath, onHit, onStats, onError,
+  chromePath, onHit, onStats, onError, onAdapter,
 }) {
   const chrome = findChrome(chromePath);
 
@@ -220,24 +224,30 @@ export async function startGpuDriver({
         if (m.type === 'hit')     onHit?.({ nonce: m.nonce, digest: m.digest });
         else if (m.type === 'stats') onStats?.({ delta: m.delta });
         else if (m.type === 'error') onError?.(new Error(m.msg));
-        else if (m.type === 'adapter') {
-          /* could log adapter info if needed */
-        }
+        else if (m.type === 'adapter') onAdapter?.(m);
       } catch (e) { onError?.(e); }
     });
     // Push the initial job
     ws.send(JSON.stringify({ type: 'job', job: currentJob }));
   });
 
-  // 2. Spawn Chrome pointed at the local page
+  // 2. Spawn Chrome pointed at the local page.
+  // Chrome's WebGPU backend is platform-specific: Metal on macOS, D3D12 on
+  // Windows, Vulkan on Linux. The old flag set forced SwiftShader (CPU)
+  // everywhere, which silently killed GPU acceleration on Mac/Windows.
+  // Now: only enable WebGPU explicitly; opt-in CPU fallback for Linux servers
+  // without a real GPU driver via POSCI_GPU_SWIFTSHADER=1.
   const userDataDir = join(tmpdir(), `posci-miner-${process.pid}-${Date.now()}`);
+  const isLinux = process.platform === 'linux';
+  const useSwiftShader = isLinux && process.env.POSCI_GPU_SWIFTSHADER === '1';
   const args = [
     '--headless=new',
     '--no-sandbox',
     '--disable-gpu-sandbox',
-    '--enable-features=Vulkan,UseSkiaRenderer',
     '--enable-unsafe-webgpu',
-    '--use-vulkan=swiftshader',
+    ...(useSwiftShader
+      ? ['--enable-features=Vulkan', '--use-vulkan=swiftshader']
+      : []),
     `--user-data-dir=${userDataDir}`,
     `--remote-debugging-port=0`,
     '--no-first-run',

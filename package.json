@@ -1,6 +1,6 @@
 {
   "name": "posci-miner",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "CLI miner for POSCI (Proof of Scientist) — Bitcoin-style PoW token on Ethereum mainnet. CPU + WebGPU (via headless Chrome) + hybrid modes. Anti-MEV: hash includes msg.sender.",
   "type": "module",
   "license": "MIT",
